@@ -1,0 +1,153 @@
+# ⚠️ WARNING: This configuration completely overrides config.yml!
+# Only change if you know what you're doing. A server restart is required for every change.
+
+# ========== LANGUAGE SETTING ==========
+language: "en"
+
+enableAdvancedConfig: false
+
+# ========== WORLD CONFIGURATION ==========
+world-settings:
+  default:
+    view-distance: 8
+    simulation-distance: 6
+    entity-tracking-range:
+      players: 48
+      animals: 32
+      monsters: 32
+      misc: 16
+      other: 64
+    max-entity-collisions: 4
+    tick-rates:
+      grass: 100
+      fluid: 10
+      mob-spawner: 2
+    mob-spawning:
+      wateranimal-spawn-height:
+        min: 45
+        max: 63
+      spawn-limits:
+        ambient: 2
+        axolotls: 3
+        creature: 10
+        monster: 30
+        underground-water-creature: 3
+        water-creature: 3
+        water-ambient: 15
+    despawn-ranges:
+      soft: 32
+      hard: 128
+    entity:
+      experience-merge-max-value: 100
+      max-tnt-per-tick: 200
+      fishing-time-range:
+        min: 100
+        max: 600
+    hunger:
+      replenish:
+        walk-exhaustion: 0.05
+        sprint-exhaustion: 0.1
+        combat-exhaustion: 0.1
+        regen-exhaustion: 0.1
+        jump-exhaustion: 0.05
+        swim-multiplier: 0.01
+    player:
+      sleep-percent: 50
+    chunks:
+      auto-save-interval: 6000
+      max-auto-save-chunks-per-tick: 12
+      fixed-chunk-inhabited-time: -1
+      prevent-moving-into-unloaded-chunks: true
+      enable-finder-collisions: false
+
+# ========== ENTITY OPTIMIZATIONS ==========
+entity:
+  activation-range:
+    animals: 20
+    monsters: 24
+    raiders: 48
+    misc: 8
+    tick-inactive-villagers: false
+    ignore-spectators: true
+    wake-up-inactive:
+      animals-max-per-tick: 4
+      monsters-max-per-tick: 8
+      villagers-max-per-tick: 4
+      flying-monsters-max-per-tick: 8
+      villagers-active-for-panic: false
+  collisions:
+    max-entities-per-collision: 4
+    only-players-collide: false
+  pathfinding:
+    update-interval: 40
+
+# ========== REDSTONE & PHYSICS ==========
+redstone:
+  disable-falling-dust: false
+  disable-item-frame-glow: false
+hopper:
+  cooldown-when-full: true
+  disable-move-event: false
+  ignore-occluding-blocks: false
+
+# ========== SPAWNING & GENERATION ==========
+spawning:
+  all-chunks-are-slime-chunks: false
+  grass-spread-tick-rate: 100
+  mob-spawn-range:
+    monsters: 8
+    animals: 4
+    water-animals: 4
+    villagers: 2
+
+# ========== NETWORK & PACKET ==========
+network:
+  compression-threshold: 256
+  compression-level: -1
+  keep-alive-interval: 30
+
+# ========== EMERGENCY SYSTEM ==========
+emergency:
+  enabled: true
+  check-interval-seconds: 5
+  tps-threshold: 15.0
+  mspt-threshold: 45.0
+  actions:
+    kill-non-player-entities: true
+    clear-ground-items: true
+    clear-projectiles: true
+    clear-vehicles: true
+    clear-painting-itemframes: true
+  notification:
+    broadcast-warning: true
+    warn-ops-only: false
+    console-alerts: true
+    action-bar-alerts: true
+
+# ========== CLEANUP ROUTINES ==========
+cleanup:
+  enabled: true
+  interval-ticks: 36000
+  remove:
+    ground-items: true
+    inactive-vehicles: true
+    arrows-older-than-seconds: 300
+    experience-orb-older-than-seconds: 300
+  limits:
+    max-items-per-chunk: 50
+    max-experience-orbs-per-chunk: 30
+
+# ========== CACHING & PERFORMANCE ==========
+caching:
+  region-file-cache-size: 256
+  cache-chunk-maps-for: 20
+
+# ========== DEBUG & LOGGING ==========
+debug:
+  entities: false
+  pathfinding: false
+  goal-selection: false
+logging:
+  emergency-actions: true
+  config-changes: true
+  performance-warnings: true

@@ -1,0 +1,68 @@
+# ⚡ PerformancePlugin - Simple Configuration
+# These settings significantly improve server performance.
+# A server restart is needed for every change.
+
+# ========== LANGUAGE SETTING ==========
+language: "en"
+
+# ========== IMPORTANT BASIC SETTINGS ==========
+
+# View distance & simulation (biggest performance factor)
+view-distance: 8              # Chunks that players see (8-10 is good)
+simulation-distance: 6        # Chunks that are calculated (4-6 recommended)
+
+# Entity settings
+entity-activation-range:
+  monsters: 24                # Monsters activate at 24 blocks (default: 32)
+  animals: 20                 # Animals activate at 20 blocks (default: 32)
+  misc: 8                     # Other entities (items) at 8 blocks (default: 16)
+
+# Mob spawn limits
+spawn-limits:
+  monsters: 30                # Maximum monsters per player (default: 70)
+  animals: 15                 # Maximum animals per player (default: 10)
+  water-animals: 5            # Maximum water animals (default: 5)
+  ambient: 2                  # Maximum bats (default: 15)
+
+# ========== PERFORMANCE FEATURES ==========
+
+# Automatic cleanup routines
+cleanup:
+  enabled: true
+  interval-minutes: 30        # Clean up every 30 minutes
+  remove-ground-items: true   # Remove dropped items
+  remove-inactive-vehicles: true  # Remove boats/minecarts
+
+# TPS emergency system (your most important feature!)
+emergency:
+  enabled: true
+  check-interval-seconds: 5   # Check TPS every 5 seconds
+  tps-threshold: 15.0         # Trigger emergency below 15 TPS
+  kill-non-player-entities: true  # Remove all entities except players
+  broadcast-warning: true     # Send warning to all players
+
+# ========== FURTHER OPTIMIZATIONS ==========
+
+# Redstone optimizations (helps with large machines)
+redstone:
+  disable-falling-dust: false  # Disable falling concrete dust
+  disable-item-frame-glow: false  # Glow effect for item frames
+
+# Villager optimizations
+villager:
+  tick-inactive-villagers: false  # Don't tick inactive villagers
+
+# ========== PLUGIN SETTINGS ==========
+
+# Should the advanced configuration be loaded?
+# If false, this file is used. If true, advanced-config.yml is used.
+enableAdvancedConfig: false
+
+# Plugin metrics (anonymous usage data for improvements)
+metrics: true
+
+# Logging settings
+logging:
+  emergency-actions: true     # Log emergency actions
+  cleanup-actions: true       # Log cleanup actions
+  config-changes: true        # Log config changes

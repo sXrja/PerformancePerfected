@@ -1,5 +1,36 @@
 name: PerformancePerfected
-version: '1.0-SNAPSHOT'
+version: '1.0.0'
 main: de.sxrja.performancePerfected.PerformancePerfected
 api-version: '1.21'
 authors: [ sXrja ]
+description: Advanced server performance optimization with auto-configuration
+
+commands:
+  performanceperfected:
+    description: Main command for PerformancePerfected
+    aliases: [pp, perf]
+    usage: /<command> [reload|status|emergency|cleanup|monitor|help]
+
+  pptest:
+    description: Test command for emergency simulation
+    aliases: [perftest]
+    usage: /pptest [tps|cleanup|notify]
+
+permissions:
+  performanceperfected.notify:
+    description: Receive notifications about config changes
+    default: op
+  performanceperfected.admin:
+    description: Full access to all plugin features
+    default: op
+    children:
+      performanceperfected.notify: true
+  performanceperfected.emergency:
+    description: Can manually trigger emergency protocols
+    default: op
+  performanceperfected.bypass:
+    description: Excluded from cleanup actions
+    default: false
+  performanceperfected.metrics:
+    description: Allow anonymous usage statistics
+    default: true

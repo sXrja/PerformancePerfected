@@ -1,0 +1,60 @@
+# 🌐 PerformancePlugin - Sprach- und Nachrichtendatei
+# Hier können alle Chat-Nachrichten, Log-Meldungen und Benachrichtigungen angepasst werden.
+
+# ========== NOTFALLSYSTEM NACHRICHTEN ==========
+emergency:
+  tps-low-warning: "&c⚠ &6Warnung: &fServer-TPS ist kritisch niedrig (&e{TPS}&f/20)"
+  emergency-activated: "&4🚨 &cNotfallprotokoll aktiviert! &fNicht-Spieler-Entities werden gelöscht."
+  entities-removed: "&a✅ &fEs wurden &e{COUNT} &fEntities entfernt."
+  broadcast-warning: "&c⚠ &6Warnung: &fServer-Performance kritisch. Bereinigung läuft..."
+
+# ========== CONFIG-ÄNDERUNGEN NACHRICHTEN ==========
+config:
+  change-detected: "&e⚡ &6PerformancePlugin: &fConfig wurde geändert!"
+  restart-required: "&e🔄 &6Neustart erforderlich: &fEinstellungen wurden geändert"
+  notification: "&e⚙️ &fEinstellungen geändert. Bitte Server neustarten (&cnot reloade&f)!"
+  file-changed: "&7Datei geändert: &f{FILE}"
+
+  # Broadcast-Nachrichten (alle 10 Sekunden)
+  broadcast:
+    line1: "&c⚠══════════════════════════════════════⚠"
+    line2: "&6⚡ &ePerformance-Einstellungen wurden geändert!"
+    line3: "&f➤ &7Ein &cServer-Neustart &7ist erforderlich"
+    line4: "&f➤ &7Nicht nur &e/reload &7verwenden"
+    line5: "&f➤ &7Änderungen werden erst nach Neustart aktiv"
+    line6: "&c⚠══════════════════════════════════════⚠"
+
+# ========== AUFRÄUM-ROUTINEN NACHRICHTEN ==========
+cleanup:
+  starting: "&7[Performance] &fStarte Aufräumroutine..."
+  items-removed: "&7[Performance] &fEntfernt: &e{COUNT} &fherumliegende Items"
+  vehicles-removed: "&7[Performance] &fEntfernt: &e{COUNT} &finaktive Fahrzeuge"
+  completed: "&7[Performance] &aAufräumen abgeschlossen"
+
+# ========== PLUGIN-NACHRICHTEN ==========
+plugin:
+  enabled: "&a✅ PerformancePlugin erfolgreich aktiviert"
+  config-reloaded: "&a✅ Konfiguration neu geladen"
+  applying-settings: "&7[Performance] &fWende Optimierungen an..."
+
+  # Hilfe-Nachrichten
+  help:
+    title: "&6⚡ PerformancePlugin Help"
+    reload: "&e/pp reload &7- Konfiguration neu laden"
+    emergency: "&e/pp emergency &7- Notfall-Lösung manuell auslösen"
+    status: "&e/pp status &7- Aktuelle Performance anzeigen"
+    cleanup: "&e/pp cleanup &7- Manuelles Aufräumen"
+
+# ========== FEHLER-NACHRICHTEN ==========
+errors:
+  no-permission: "&c❌ Keine Berechtigung: &fperformanceplugin.admin"
+  config-error: "&c❌ Fehler beim Laden der Config: &7{ERROR}"
+  file-not-found: "&c❌ Datei nicht gefunden: &7{FILE}"
+  already-running: "&c❌ Aktion läuft bereits"
+
+# ========== PERMISSION-NODES ==========
+permissions:
+  admin: "performanceplugin.admin"
+  notify: "performanceplugin.notify"
+  bypass: "performanceplugin.bypass"
+  emergency: "performanceplugin.emergency"
