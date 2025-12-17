@@ -1,0 +1,5 @@
+name: PerformancePerfected
+version: '1.0-SNAPSHOT'
+main: de.sxrja.performancePerfected.PerformancePerfected
+api-version: '1.21'
+authors: [ sXrja ]
