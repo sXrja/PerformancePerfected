@@ -1,5 +1,6 @@
 package de.sxrja.performancePerfected.managers;
 
+import de.sxrja.performancePerfected.PerformancePerfected;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -15,27 +16,32 @@ public class PerformanceOptimizer {
 
     private JavaPlugin plugin;
     private ConfigManager configManager;
+    private NotificationManager notificationManager;
     private YamlConfiguration activeConfig;
 
-    // Konstante für benötigte Neustarts
     private boolean restartRequired = false;
 
-    public PerformanceOptimizer(JavaPlugin plugin, ConfigManager configManager) {
+    // Adaptive Clearing System
+    private BukkitRunnable adaptiveCleanupTask = null;
+    private boolean isAdaptiveCleanupRunning = false;
+    private int adaptiveCleanupTaskId = -1;
+
+    // Timers für verschiedene Funktionen
+    private BukkitRunnable emergencyMonitorTask = null;
+    private BukkitRunnable adaptiveMonitorTask = null;
+
+    public PerformanceOptimizer(JavaPlugin plugin, ConfigManager configManager, NotificationManager notificationManager) {
         this.plugin = plugin;
         this.configManager = configManager;
+        this.notificationManager = notificationManager;
 
-        // WICHTIG: activeConfig muss NACH dem Laden der Configs gesetzt werden
-        // In der Hauptklasse wird PerformanceOptimizer NACH configManager.loadConfigs() erstellt
-        // Daher sollte activeConfig hier nicht null sein
         this.activeConfig = configManager.getActiveConfig();
 
-        // Sicherheitsprüfung
         if (this.activeConfig == null) {
             plugin.getLogger().warning("WARNING: Active config is null! Using default config instead.");
             this.activeConfig = configManager.getConfig();
         }
 
-        // Nochmalige Sicherheitsprüfung
         if (this.activeConfig == null) {
             plugin.getLogger().severe("CRITICAL ERROR: Could not load any configuration!");
             throw new IllegalStateException("No configuration loaded!");
@@ -50,19 +56,12 @@ public class PerformanceOptimizer {
                 "&7[Performance] &fApplying optimizations...");
         plugin.getLogger().info(configManager.stripColor(applyingMsg));
 
-        // Debug-Info
-        plugin.getLogger().info("Active config loaded: " + (activeConfig != null));
-        if (activeConfig != null) {
-            plugin.getLogger().info("Config keys: " + activeConfig.getKeys(false).size());
-        }
-
         // Alle Optimierungsbereiche durchgehen
         optimizeServerProperties();
         optimizePaperConfig();
         optimizeSpigotConfig();
         optimizeBukkitConfig();
 
-        // Überprüfen ob Neustart benötigt wird
         if (restartRequired) {
             String restartMsg = configManager.getLangMessage("config.restart-required",
                     "&e⚠ &6Restart required for some optimizations!");
@@ -70,6 +69,7 @@ public class PerformanceOptimizer {
         }
 
         startEmergencyMonitor();
+        startAdaptiveCleanupMonitor();
     }
 
     /**
@@ -83,44 +83,31 @@ public class PerformanceOptimizer {
 
             boolean changed = false;
 
-            // View-Distance optimieren - MIT NULL-SICHERHEIT
-            int viewDistance = 8; // Standardwert
-            if (activeConfig != null && activeConfig.contains("view-distance")) {
-                viewDistance = activeConfig.getInt("view-distance", 8);
-            }
+            // View-Distance optimieren
+            int viewDistance = activeConfig.getInt("view-distance", 8);
             if (setPropertyIfDifferent(props, "view-distance", String.valueOf(Math.max(2, Math.min(32, viewDistance))))) {
                 changed = true;
             }
 
-            // Simulation-Distance optimieren - MIT NULL-SICHERHEIT
-            int simulationDistance = 6; // Standardwert
-            if (activeConfig != null && activeConfig.contains("simulation-distance")) {
-                simulationDistance = activeConfig.getInt("simulation-distance", 6);
-            }
+            // Simulation-Distance optimieren
+            int simulationDistance = activeConfig.getInt("simulation-distance", 6);
             if (setPropertyIfDifferent(props, "simulation-distance", String.valueOf(Math.max(2, Math.min(32, simulationDistance))))) {
                 changed = true;
             }
 
-            // Network-Compression optimieren - MIT NULL-SICHERHEIT
-            int compressionThreshold = 256; // Standardwert
-            if (activeConfig != null && activeConfig.contains("network.compression-threshold")) {
-                compressionThreshold = activeConfig.getInt("network.compression-threshold", 256);
-            }
+            // Network-Compression optimieren
+            int compressionThreshold = activeConfig.getInt("network.compression-threshold", 256);
             if (setPropertyIfDifferent(props, "network-compression-threshold", String.valueOf(compressionThreshold))) {
                 changed = true;
             }
 
-            // Max Players limitieren - MIT NULL-SICHERHEIT
-            int maxPlayers = 20; // Standardwert
-            if (activeConfig != null && activeConfig.contains("max-players")) {
-                maxPlayers = activeConfig.getInt("max-players", 20);
-            }
+            // Max Players limitieren
+            int maxPlayers = activeConfig.getInt("max-players", 20);
             if (setPropertyIfDifferent(props, "max-players", String.valueOf(Math.max(1, Math.min(1000, maxPlayers))))) {
                 changed = true;
             }
 
             if (changed) {
-                // Backup erstellen
                 createBackup(serverProps);
                 props.store(new FileOutputStream(serverProps), "Optimized by PerformancePerfected");
                 plugin.getLogger().info("✓ server.properties optimized");
@@ -148,8 +135,7 @@ public class PerformanceOptimizer {
             YamlConfiguration paperYaml = YamlConfiguration.loadConfiguration(paperConfig);
             boolean changed = false;
 
-            // Entity Activation Range optimieren - MIT NULL-SICHERHEIT
-            if (activeConfig != null && activeConfig.contains("entity.activation-range")) {
+            if (activeConfig.contains("entity.activation-range")) {
                 paperYaml.set("entity-activation-range.animals",
                         activeConfig.getInt("entity.activation-range.animals", 20));
                 paperYaml.set("entity-activation-range.monsters",
@@ -161,8 +147,7 @@ public class PerformanceOptimizer {
                 changed = true;
             }
 
-            // Mob-Spawn Limits optimieren - MIT NULL-SICHERHEIT
-            if (activeConfig != null && activeConfig.contains("spawn-limits")) {
+            if (activeConfig.contains("spawn-limits")) {
                 paperYaml.set("spawn-limits.monsters",
                         activeConfig.getInt("spawn-limits.monsters", 30));
                 paperYaml.set("spawn-limits.animals",
@@ -174,8 +159,7 @@ public class PerformanceOptimizer {
                 changed = true;
             }
 
-            // Despawn Ranges optimieren - MIT NULL-SICHERHEIT
-            if (activeConfig != null && activeConfig.contains("despawn-ranges")) {
+            if (activeConfig.contains("despawn-ranges")) {
                 paperYaml.set("despawn-ranges.soft",
                         activeConfig.getInt("despawn-ranges.soft", 32));
                 paperYaml.set("despawn-ranges.hard",
@@ -183,8 +167,7 @@ public class PerformanceOptimizer {
                 changed = true;
             }
 
-            // Redstone Optimierungen - MIT NULL-SICHERHEIT
-            if (activeConfig != null && activeConfig.contains("redstone")) {
+            if (activeConfig.contains("redstone")) {
                 paperYaml.set("redstone.disable-falling-dust",
                         activeConfig.getBoolean("redstone.disable-falling-dust", false));
                 paperYaml.set("redstone.disable-item-frame-glow",
@@ -197,8 +180,6 @@ public class PerformanceOptimizer {
                 paperYaml.save(paperConfig);
                 plugin.getLogger().info("✓ Paper config optimized");
                 restartRequired = true;
-            } else {
-                plugin.getLogger().info("✓ Paper config already optimized");
             }
 
         } catch (IOException e) {
@@ -220,7 +201,6 @@ public class PerformanceOptimizer {
             YamlConfiguration spigotYaml = YamlConfiguration.loadConfiguration(spigotConfig);
             boolean changed = false;
 
-            // Entity Tracking Range optimieren - MIT NULL-SICHERHEIT
             if (setYamlIfDifferent(spigotYaml, "world-settings.default.entity-tracking-range.players", 48)) {
                 changed = true;
             }
@@ -234,7 +214,6 @@ public class PerformanceOptimizer {
                 changed = true;
             }
 
-            // Mob Spawn Range optimieren - MIT NULL-SICHERHEIT
             if (setYamlIfDifferent(spigotYaml, "world-settings.default.mob-spawn-range", 6)) {
                 changed = true;
             }
@@ -244,8 +223,6 @@ public class PerformanceOptimizer {
                 spigotYaml.save(spigotConfig);
                 plugin.getLogger().info("✓ Spigot config optimized");
                 restartRequired = true;
-            } else {
-                plugin.getLogger().info("✓ Spigot config already optimized");
             }
 
         } catch (IOException e) {
@@ -267,7 +244,6 @@ public class PerformanceOptimizer {
             YamlConfiguration bukkitYaml = YamlConfiguration.loadConfiguration(bukkitConfig);
             boolean changed = false;
 
-            // Spawn Limits optimieren - MIT NULL-SICHERHEIT
             if (setYamlIfDifferent(bukkitYaml, "spawn-limits.monsters", 30)) {
                 changed = true;
             }
@@ -281,7 +257,6 @@ public class PerformanceOptimizer {
                 changed = true;
             }
 
-            // Chunk GC optimieren - MIT NULL-SICHERHEIT
             if (setYamlIfDifferent(bukkitYaml, "chunk-gc.period-in-ticks", 600)) {
                 changed = true;
             }
@@ -291,8 +266,6 @@ public class PerformanceOptimizer {
                 bukkitYaml.save(bukkitConfig);
                 plugin.getLogger().info("✓ Bukkit config optimized");
                 restartRequired = true;
-            } else {
-                plugin.getLogger().info("✓ Bukkit config already optimized");
             }
 
         } catch (IOException e) {
@@ -306,9 +279,6 @@ public class PerformanceOptimizer {
     private void applyAdvancedConfiguration() {
         try {
             plugin.getLogger().info("Applying advanced optimizations...");
-
-            // Hier können spezifische erweiterte Optimierungen hinzugefügt werden
-            // Beispiel: Welt-spezifische Einstellungen
 
             for (World world : Bukkit.getWorlds()) {
                 optimizeWorldSpecificSettings(world);
@@ -326,13 +296,10 @@ public class PerformanceOptimizer {
      */
     private void optimizeWorldSpecificSettings(World world) {
         try {
-            // Beispiel: Entity-Grenzen pro Welt setzen
-            if (activeConfig != null) {
-                world.setMonsterSpawnLimit(activeConfig.getInt("spawn-limits.monsters", 30));
-                world.setAnimalSpawnLimit(activeConfig.getInt("spawn-limits.animals", 15));
-                world.setWaterAnimalSpawnLimit(activeConfig.getInt("spawn-limits.water-animals", 5));
-                world.setAmbientSpawnLimit(activeConfig.getInt("spawn-limits.ambient", 2));
-            }
+            world.setMonsterSpawnLimit(activeConfig.getInt("spawn-limits.monsters", 30));
+            world.setAnimalSpawnLimit(activeConfig.getInt("spawn-limits.animals", 15));
+            world.setWaterAnimalSpawnLimit(activeConfig.getInt("spawn-limits.water-animals", 5));
+            world.setAmbientSpawnLimit(activeConfig.getInt("spawn-limits.ambient", 2));
 
         } catch (Exception e) {
             plugin.getLogger().warning("Could not optimize world " + world.getName() + ": " + e.getMessage());
@@ -340,35 +307,203 @@ public class PerformanceOptimizer {
     }
 
     /**
-     * NOTFALL-ÜBERWACHUNG STARTEN
+     * NOTFALL-ÜBERWACHUNG STARTEN (TPS-Check alle 5 Sekunden)
      */
     private void startEmergencyMonitor() {
-        new BukkitRunnable() {
+        emergencyMonitorTask = new BukkitRunnable() {
             @Override
             public void run() {
                 double currentTps = Bukkit.getTPS()[0];
-                double threshold = 15.0; // Standardwert
-
-                // MIT NULL-SICHERHEIT
-                if (activeConfig != null && activeConfig.contains("emergency.tps-threshold")) {
-                    threshold = activeConfig.getDouble("emergency.tps-threshold", 15.0);
-                }
+                double threshold = activeConfig.getDouble("emergency.tps-threshold", 15.0);
 
                 if (currentTps < threshold) {
                     triggerEmergencyProtocol(currentTps);
                 }
+            }
+        };
+        emergencyMonitorTask.runTaskTimer(plugin, 100L, 100L); // Alle 5 Sekunden
+    }
 
-                // Automatische Aufräumroutinen - MIT NULL-SICHERHEIT
-                boolean cleanupEnabled = false;
-                if (activeConfig != null && activeConfig.contains("cleanup.enabled")) {
-                    cleanupEnabled = activeConfig.getBoolean("cleanup.enabled", false);
+    /**
+     * ADAPTIVE CLEANUP MONITOR STARTEN (prüft alle 10 Sekunden)
+     */
+    private void startAdaptiveCleanupMonitor() {
+        adaptiveMonitorTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                double currentTps = Bukkit.getTPS()[0];
+                boolean adaptiveClearingEnabled = activeConfig.getBoolean("cleanup.adaptive-clearing", true);
+
+                if (!adaptiveClearingEnabled) {
+                    // Normales Cleanup mit fester Zeit
+                    if (activeConfig.getBoolean("cleanup.enabled", false)) {
+                        runScheduledCleanup();
+                    }
+                    return;
                 }
 
-                if (cleanupEnabled) {
-                    runCleanupRoutines();
+                // Adaptive Logik
+                double adaptiveThreshold = activeConfig.getDouble("cleanup.adaptive-tps-threshold", 17.0);
+
+                if (currentTps < adaptiveThreshold) {
+                    // TPS zu niedrig - Starte Cleanup Timer wenn nicht bereits läuft
+                    if (!isAdaptiveCleanupRunning) {
+                        startAdaptiveCleanupTimer();
+                        plugin.getLogger().info("⚠ Adaptive cleanup activated (TPS: " + String.format("%.1f", currentTps) + ")");
+                    }
+                } else {
+                    // TPS normal - Stoppe Cleanup Timer wenn läuft
+                    if (isAdaptiveCleanupRunning) {
+                        stopAdaptiveCleanupTimer();
+                        plugin.getLogger().info("✓ Adaptive cleanup deactivated (TPS: " + String.format("%.1f", currentTps) + ")");
+                    }
                 }
             }
-        }.runTaskTimer(plugin, 100L, 100L); // Alle 5 Sekunden
+        };
+        adaptiveMonitorTask.runTaskTimer(plugin, 100L, 200L); // Prüft alle 10 Sekunden
+    }
+
+    /**
+     * ADAPTIVE CLEANUP TIMER STARTEN (mit Countdown)
+     */
+    private void startAdaptiveCleanupTimer() {
+        if (adaptiveCleanupTask != null) {
+            stopAdaptiveCleanupTimer();
+        }
+
+        isAdaptiveCleanupRunning = true;
+
+        // Countdown-Zeit in Sekunden aus Config
+        int countdownSeconds = activeConfig.getInt("cleanup.countdown-seconds", 60);
+
+        // Countdown für Spieler starten
+        if (notificationManager != null) {
+            notificationManager.startCleanupCountdown(countdownSeconds);
+        }
+
+        // Cleanup-Intervall in Sekunden aus Config lesen
+        int intervalSeconds = activeConfig.getInt("cleanup.adaptive-interval-seconds", 30);
+        long intervalTicks = intervalSeconds * 20L;
+        long countdownTicks = countdownSeconds * 20L;
+
+        // Task starten (nach Countdown)
+        adaptiveCleanupTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                runIntelligentCleanup();
+            }
+        };
+
+        // Erst nach Countdown starten
+        adaptiveCleanupTaskId = adaptiveCleanupTask.runTaskTimer(plugin, countdownTicks, intervalTicks).getTaskId();
+    }
+
+    /**
+     * ADAPTIVE CLEANUP TIMER STOPPEN (mit Countdown-Abbruch)
+     */
+    private void stopAdaptiveCleanupTimer() {
+        if (adaptiveCleanupTask != null) {
+            try {
+                adaptiveCleanupTask.cancel();
+                if (adaptiveCleanupTaskId != -1) {
+                    plugin.getServer().getScheduler().cancelTask(adaptiveCleanupTaskId);
+                }
+            } catch (Exception e) {
+                // Ignorieren
+            }
+        }
+
+        // Countdown auch stoppen
+        if (notificationManager != null) {
+            notificationManager.stopCleanupCountdown();
+        }
+
+        adaptiveCleanupTask = null;
+        isAdaptiveCleanupRunning = false;
+        adaptiveCleanupTaskId = -1;
+    }
+
+    /**
+     * INTELLIGENTES CLEANUP (für adaptives Clearing)
+     * Entfernt nur Items, die mindestens X Sekunden alt sind
+     */
+    private void runIntelligentCleanup() {
+        int removedItems = 0;
+        int removedVehicles = 0;
+        int removedExperienceOrbs = 0;
+
+        // Mindestalter für Items in Sekunden
+        int minItemAgeSeconds = activeConfig.getInt("cleanup.min-item-age-seconds", 30);
+        long minItemAgeTicks = minItemAgeSeconds * 20L;
+        long currentTick = Bukkit.getCurrentTick();
+
+        boolean removeGroundItems = activeConfig.getBoolean("cleanup.remove-ground-items", true);
+        boolean removeInactiveVehicles = activeConfig.getBoolean("cleanup.remove-inactive-vehicles", true);
+        boolean removeExperienceOrbs = activeConfig.getBoolean("cleanup.remove-experience-orbs", true);
+
+        for (World world : Bukkit.getWorlds()) {
+            for (Entity entity : world.getEntities()) {
+                // Nur Items, die älter als minItemAgeSeconds sind
+                if (entity instanceof Item && removeGroundItems) {
+                    if ((currentTick - entity.getTicksLived()) > minItemAgeTicks) {
+                        entity.remove();
+                        removedItems++;
+                    }
+                }
+                // Fahrzeuge (nur wenn leer und alt genug)
+                else if ((entity instanceof Boat || entity instanceof Minecart) && removeInactiveVehicles) {
+                    if (entity.getPassengers().isEmpty() && (currentTick - entity.getTicksLived()) > minItemAgeTicks) {
+                        entity.remove();
+                        removedVehicles++;
+                    }
+                }
+                // Erfahrungskugeln
+                else if (entity instanceof ExperienceOrb && removeExperienceOrbs) {
+                    if ((currentTick - entity.getTicksLived()) > minItemAgeTicks) {
+                        entity.remove();
+                        removedExperienceOrbs++;
+                    }
+                }
+            }
+        }
+
+        if (removedItems > 0 || removedVehicles > 0 || removedExperienceOrbs > 0) {
+            plugin.getLogger().info(String.format("🧹 Intelligent cleanup: %d items (age > %ds), %d vehicles, %d XP orbs",
+                    removedItems, minItemAgeSeconds, removedVehicles, removedExperienceOrbs));
+
+            // Erfolgsmeldung an Spieler
+            if (notificationManager != null) {
+                notificationManager.broadcastCleanupCompleted(removedItems, removedVehicles, removedExperienceOrbs);
+            }
+        }
+    }
+
+    /**
+     * NORMALES SCHEDULED CLEANUP (nicht-adaptiv)
+     */
+    private void runScheduledCleanup() {
+        // Cleanup-Intervall in Sekunden aus Config
+        int intervalSeconds = activeConfig.getInt("cleanup.interval-seconds", 300);
+        long intervalTicks = intervalSeconds * 20L;
+
+        // Countdown starten wenn aktiv
+        if (activeConfig.getBoolean("cleanup.countdown-enabled", true)) {
+            int countdownSeconds = activeConfig.getInt("cleanup.countdown-seconds", 60);
+            if (notificationManager != null) {
+                notificationManager.startCleanupCountdown(countdownSeconds);
+            }
+
+            // Task nach Countdown starten
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    runIntelligentCleanup();
+                }
+            }.runTaskLater(plugin, countdownSeconds * 20L);
+        } else {
+            // Sofort ausführen
+            runIntelligentCleanup();
+        }
     }
 
     /**
@@ -381,10 +516,7 @@ public class PerformanceOptimizer {
 
         plugin.getLogger().warning(configManager.stripColor(tpsWarning));
 
-        boolean killEntities = true; // Standardwert
-        if (activeConfig != null && activeConfig.contains("emergency.kill-non-player-entities")) {
-            killEntities = activeConfig.getBoolean("emergency.kill-non-player-entities", true);
-        }
+        boolean killEntities = activeConfig.getBoolean("emergency.kill-non-player-entities", true);
 
         if (killEntities) {
             killAllNonPlayerEntities();
@@ -392,7 +524,7 @@ public class PerformanceOptimizer {
     }
 
     /**
-     * ALLE NICHT-SPIELER-ENTITIES ENTFERNEN
+     * ALLE NICHT-SPIELER-ENTITIES ENTFERNEN (Notfall-Cleanup)
      */
     public void killAllNonPlayerEntities() {
         Map<String, Integer> removedCounts = new HashMap<>();
@@ -413,7 +545,6 @@ public class PerformanceOptimizer {
             }
         }
 
-        // Log-Ausgabe mit Details
         String logMessage = String.format("Emergency cleanup: %d entities removed", totalRemoved);
         if (!removedCounts.isEmpty()) {
             logMessage += " - " + removedCounts.entrySet().stream()
@@ -422,7 +553,6 @@ public class PerformanceOptimizer {
         }
         plugin.getLogger().info(logMessage);
 
-        // Chat-Nachricht an Ops
         String broadcastMsg = configManager.getLangMessage("emergency.broadcast-warning",
                 "&c⚠ &6Warning: &fServer performance critical. Cleanup in progress...");
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -433,43 +563,23 @@ public class PerformanceOptimizer {
     }
 
     /**
-     * AUTOMATISCHE AUFRÄUMROUTINEN
+     * MANUELLES CLEANUP AUSFÜHREN
      */
-    private void runCleanupRoutines() {
-        int groundItemsRemoved = 0;
-        int vehiclesRemoved = 0;
+    public void forceCleanup() {
+        runIntelligentCleanup();
+    }
 
-        boolean removeGroundItems = true; // Standardwert
-        boolean removeInactiveVehicles = true; // Standardwert
-
-        if (activeConfig != null) {
-            if (activeConfig.contains("cleanup.remove-ground-items")) {
-                removeGroundItems = activeConfig.getBoolean("cleanup.remove-ground-items", true);
-            }
-            if (activeConfig.contains("cleanup.remove-inactive-vehicles")) {
-                removeInactiveVehicles = activeConfig.getBoolean("cleanup.remove-inactive-vehicles", true);
-            }
+    /**
+     * ALLE TIMERS STOPPEN
+     */
+    public void stopAllTimers() {
+        if (emergencyMonitorTask != null) {
+            emergencyMonitorTask.cancel();
         }
-
-        for (World world : Bukkit.getWorlds()) {
-            for (Entity entity : world.getEntities()) {
-                if (entity instanceof Item && removeGroundItems) {
-                    entity.remove();
-                    groundItemsRemoved++;
-                } else if ((entity instanceof Boat || entity instanceof Minecart) && removeInactiveVehicles) {
-                    // Überprüfe ob Fahrzeug leer ist
-                    if (entity.getPassengers().isEmpty()) {
-                        entity.remove();
-                        vehiclesRemoved++;
-                    }
-                }
-            }
+        if (adaptiveMonitorTask != null) {
+            adaptiveMonitorTask.cancel();
         }
-
-        if (groundItemsRemoved > 0 || vehiclesRemoved > 0) {
-            plugin.getLogger().info(String.format("Cleanup: %d items, %d vehicles removed",
-                    groundItemsRemoved, vehiclesRemoved));
-        }
+        stopAdaptiveCleanupTimer();
     }
 
     /**
@@ -507,8 +617,6 @@ public class PerformanceOptimizer {
                 }
             }
 
-            plugin.getLogger().info("Backup created: " + backupFile.getName());
-
         } catch (IOException e) {
             plugin.getLogger().warning("Could not create backup for " + originalFile.getName() + ": " + e.getMessage());
         }
@@ -521,7 +629,7 @@ public class PerformanceOptimizer {
         return restartRequired;
     }
 
-    public void forceCleanup() {
-        runCleanupRoutines();
+    public boolean isAdaptiveCleanupRunning() {
+        return isAdaptiveCleanupRunning;
     }
 }

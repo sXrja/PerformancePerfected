@@ -1,6 +1,6 @@
-# ⚡ PerformancePlugin - Simple Configuration
+# ⚡ PerformancePerfected - Simple Configuration
 # These settings significantly improve server performance.
-# A server restart is needed for every change.
+# A server restart is needed for many changes.
 
 # ========== LANGUAGE SETTING ==========
 language: "en"
@@ -26,12 +26,23 @@ spawn-limits:
 
 # ========== PERFORMANCE FEATURES ==========
 
-# Automatic cleanup routines
+# Automatic cleanup routines (ALL TIMES IN SECONDS!)
 cleanup:
   enabled: true
-  interval-minutes: 30        # Clean up every 30 minutes
+  interval-seconds: 300       # Clean up every 5 minutes (300 seconds)
+  min-item-age-seconds: 30    # Items must be at least 30 seconds old
   remove-ground-items: true   # Remove dropped items
   remove-inactive-vehicles: true  # Remove boats/minecarts
+  remove-experience-orbs: true # Remove experience orbs
+
+  # ADAPTIVE CLEARING (INTELLIGENT)
+  adaptive-clearing: true     # Smart cleanup based on server TPS
+  adaptive-tps-threshold: 17.0 # Start cleanup when TPS < 17.0
+  adaptive-interval-seconds: 30 # Cleanup every 30s during low TPS
+
+  # COUNTDOWN WARNINGS
+  countdown-seconds: 60       # 60 second countdown before cleanup
+  notify-all-players: true    # Warn all players before cleanup
 
 # TPS emergency system (your most important feature!)
 emergency:
@@ -66,3 +77,4 @@ logging:
   emergency-actions: true     # Log emergency actions
   cleanup-actions: true       # Log cleanup actions
   config-changes: true        # Log config changes
+  countdown-notifications: true # Log countdown warnings

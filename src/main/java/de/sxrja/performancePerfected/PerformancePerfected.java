@@ -20,7 +20,7 @@ public final class PerformancePerfected extends JavaPlugin {
         configManager = new ConfigManager(this);
         configManager.loadConfigs();
         notificationManager = new NotificationManager(this, configManager);
-        performanceOptimizer = new PerformanceOptimizer(this, configManager);
+        performanceOptimizer = new PerformanceOptimizer(this, configManager, notificationManager);
         fileMonitor = new FileMonitor(this, configManager, notificationManager);
 
         // Einstellungen anwenden

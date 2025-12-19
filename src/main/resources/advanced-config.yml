@@ -1,10 +1,10 @@
 # ⚠️ WARNING: This configuration completely overrides config.yml!
-# Only change if you know what you're doing. A server restart is required for every change.
+# Only change if you know what you're doing. A server restart is required for many changes.
 
 # ========== LANGUAGE SETTING ==========
 language: "en"
 
-enableAdvancedConfig: false
+enableAdvancedConfig: true
 
 # ========== WORLD CONFIGURATION ==========
 world-settings:
@@ -126,16 +126,47 @@ emergency:
 
 # ========== CLEANUP ROUTINES ==========
 cleanup:
+  # BASIC SETTINGS
   enabled: true
-  interval-ticks: 36000
+
+  # NORMAL CLEANUP (when adaptive-clearing is false)
+  interval-seconds: 300            # 5 minutes in seconds (NOT ticks!)
+  min-item-age-seconds: 30         # Items must be at least 30 seconds old
+
+  # WHAT TO REMOVE
   remove:
     ground-items: true
     inactive-vehicles: true
+    experience-orbs: true
     arrows-older-than-seconds: 300
-    experience-orb-older-than-seconds: 300
+    experience-orb-older-than-seconds: 180
+
+  # ADAPTIVE CLEARING SYSTEM (INTELLIGENT)
+  adaptive-clearing: true
+  adaptive-tps-threshold: 17.0     # Start adaptive cleanup when TPS < 17.0
+  adaptive-interval-seconds: 30    # Cleanup every 30 seconds during low TPS
+  adaptive-min-tps-improvement: 2.0  # Minimum TPS improvement to disable adaptive
+
+  # COUNTDOWN SYSTEM
+  countdown:
+    enabled: true
+    duration-seconds: 60           # 60 second countdown before cleanup
+    warnings:
+      at-60-seconds: true          # 1 minute warning
+      at-30-seconds: true          # 30 second warning
+      at-10-seconds: true          # 10 second warning
+      countdown-5-to-1: true       # 5...4...3...2...1 countdown
+    notifications:
+      notify-all-players: true     # Notify all players or only admins
+      use-action-bar: true         # Show countdown in action bar
+      use-title: false             # Show title notifications
+      broadcast-to-console: true   # Log to console
+
+  # SMART LIMITS
   limits:
     max-items-per-chunk: 50
     max-experience-orbs-per-chunk: 30
+    ignore-protected-areas: true    # Ignore claims/towns (if supported)
 
 # ========== CACHING & PERFORMANCE ==========
 caching:
@@ -151,3 +182,5 @@ logging:
   emergency-actions: true
   config-changes: true
   performance-warnings: true
+  cleanup-actions: true
+  countdown-notifications: true
