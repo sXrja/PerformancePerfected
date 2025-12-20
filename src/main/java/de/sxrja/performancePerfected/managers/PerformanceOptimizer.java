@@ -18,6 +18,7 @@ public class PerformanceOptimizer {
     private ConfigManager configManager;
     private NotificationManager notificationManager;
     private YamlConfiguration activeConfig;
+    private LazyChunkManager lazyChunkManager;
 
     private boolean restartRequired = false;
 
@@ -34,6 +35,7 @@ public class PerformanceOptimizer {
         this.plugin = plugin;
         this.configManager = configManager;
         this.notificationManager = notificationManager;
+        this.lazyChunkManager = new LazyChunkManager(plugin, configManager);
 
         this.activeConfig = configManager.getActiveConfig();
 
@@ -61,6 +63,7 @@ public class PerformanceOptimizer {
         optimizePaperConfig();
         optimizeSpigotConfig();
         optimizeBukkitConfig();
+        optimizeLazyChunks();
 
         if (restartRequired) {
             String restartMsg = configManager.getLangMessage("config.restart-required",
@@ -70,6 +73,21 @@ public class PerformanceOptimizer {
 
         startEmergencyMonitor();
         startAdaptiveCleanupMonitor();
+    }
+    private void optimizeLazyChunks() {
+        if (configManager.isLazyChunksEnabled()) {
+            lazyChunkManager.start();
+
+            String lazyMsg = configManager.getLangMessage("lazy-chunks.enabled",
+                    "&7[Performance] &fLazy Chunks aktiviert: &e{DISTANCE} &7Chunks normal, restlich exponentiell langsamer"
+            ).replace("{DISTANCE}", String.valueOf(configManager.getLazyChunksDistance()));
+
+            plugin.getLogger().info(configManager.stripColor(lazyMsg));
+
+            if (configManager.isAdaptiveLaziness()) {
+                plugin.getLogger().info("✓ Adaptive Lazyness aktiviert (reduziert bei niedrigen TPS)");
+            }
+        }
     }
 
     /**
@@ -579,6 +597,9 @@ public class PerformanceOptimizer {
         if (adaptiveMonitorTask != null) {
             adaptiveMonitorTask.cancel();
         }
+        if (lazyChunkManager != null) {
+            lazyChunkManager.stop();
+        }
         stopAdaptiveCleanupTimer();
     }
 
@@ -631,5 +652,13 @@ public class PerformanceOptimizer {
 
     public boolean isAdaptiveCleanupRunning() {
         return isAdaptiveCleanupRunning;
+    }
+
+    public LazyChunkManager getLazyChunkManager() {
+        return lazyChunkManager;
+    }
+
+    public void setLazyChunkManager(LazyChunkManager lazyChunkManager) {
+        this.lazyChunkManager = lazyChunkManager;
     }
 }

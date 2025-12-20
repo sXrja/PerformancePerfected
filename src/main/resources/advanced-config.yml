@@ -81,6 +81,21 @@ entity:
   pathfinding:
     update-interval: 40
 
+# ========== CHUNK TICKS & RENDERING ==========
+lazy-chunks:
+  enabled: false
+  distance: 3
+  adaptive: false
+  min-distance: 1
+  adaptive-tps-threshold: 15.0
+  logging: false
+
+  # Advanced Tick-Skipping
+  skip-entities: true
+  skip-redstone: true
+  skip-crops: false
+  skip-weather: true
+
 # ========== REDSTONE & PHYSICS ==========
 redstone:
   disable-falling-dust: false

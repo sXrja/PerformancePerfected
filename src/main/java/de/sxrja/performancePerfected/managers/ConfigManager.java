@@ -65,6 +65,49 @@ public class ConfigManager {
         }
     }
 
+    public boolean isLazyChunksEnabled() {
+        if (!useAdvancedConfig) {
+            return false; // Nur in advanced-config verfügbar
+        }
+        return getActiveConfig().getBoolean("lazy-chunks.enabled", false);
+    }
+
+    public int getLazyChunksDistance() {
+        if (!useAdvancedConfig) {
+            return 3;
+        }
+        return Math.max(1, getActiveConfig().getInt("lazy-chunks.distance", 3));
+    }
+
+    public boolean isAdaptiveLaziness() {
+        if (!useAdvancedConfig) {
+            return false;
+        }
+        return getActiveConfig().getBoolean("lazy-chunks.adaptive", false)
+                && isLazyChunksEnabled();
+    }
+
+    public int getLazyChunksMinDistance() {
+        if (!useAdvancedConfig) {
+            return 1;
+        }
+        return Math.max(1, getActiveConfig().getInt("lazy-chunks.min-distance", 1));
+    }
+
+    public double getAdaptiveTPSThreshold() {
+        if (!useAdvancedConfig) {
+            return 15.0;
+        }
+        return getActiveConfig().getDouble("lazy-chunks.adaptive-tps-threshold", 15.0);
+    }
+
+    public boolean isLazyChunksLogging() {
+        if (!useAdvancedConfig) {
+            return false;
+        }
+        return getActiveConfig().getBoolean("lazy-chunks.logging", false);
+    }
+
     public String getLangMessage(String path, String defaultValue) {
         // Pfad mit Sprachpräfix erstellen (z.B. "en.config.change-detected")
         String fullPath = language + "." + path;

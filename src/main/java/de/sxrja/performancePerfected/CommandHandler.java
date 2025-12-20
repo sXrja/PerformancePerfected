@@ -1,10 +1,7 @@
 package de.sxrja.performancePerfected;
 
 
-import de.sxrja.performancePerfected.managers.ConfigManager;
-import de.sxrja.performancePerfected.managers.FileMonitor;
-import de.sxrja.performancePerfected.managers.NotificationManager;
-import de.sxrja.performancePerfected.managers.PerformanceOptimizer;
+import de.sxrja.performancePerfected.managers.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -26,7 +23,7 @@ public class CommandHandler implements CommandExecutor {
         this.configManager = configManager;
         this.notificationManager = notificationManager;
         this.performanceOptimizer = performanceOptimizer;
-        this.fileMonitor = plugin.getPlugin(PerformancePerfected.class).getFileMonitor();
+        this.fileMonitor = ((PerformancePerfected) plugin).getFileMonitor();
     }
 
     @Override
@@ -47,10 +44,53 @@ public class CommandHandler implements CommandExecutor {
                 return handleCleanup(sender);
             case "monitor":
                 return handleMonitor(sender, args);
+            case "lazydebug":
+            case "lazystats":
+                if (performanceOptimizer.getLazyChunkManager() != null) {
+                    LazyChunkManager lazy = performanceOptimizer.getLazyChunkManager();
+
+                    if (lazy.isActive()) {
+                        sender.sendMessage("§6════════════════ LAZY CHUNKS DEBUG ════════════════");
+                        sender.sendMessage("§7Status: §a§lACTIVE");
+                        sender.sendMessage("§7Active Radius: §e" + lazy.getCurrentDistance() + " §7Chunks");
+                        sender.sendMessage("§7Min. Radius: §e" + lazy.getMinDistance() + " §7Chunks");
+                        sender.sendMessage("§7Adaptive Mode: §e" + (lazy.isAdaptiveEnabled() ? "§aActivated" : "§cDeactivated"));
+                        sender.sendMessage("");
+                        sender.sendMessage("§6📊 Stats:");
+                        sender.sendMessage("§7Loaded Chunks: §e" + lazy.getTotalChunks());
+                        sender.sendMessage("§7Lazy Chunks: §e" + lazy.getLazyChunksCount());
+                        sender.sendMessage("§7Lazy share: §e" +
+                                String.format("%.1f%%", lazy.getTotalChunks() > 0 ?
+                                        (lazy.getLazyChunksCount() * 100.0 / lazy.getTotalChunks()) : 0));
+                        sender.sendMessage("§7Avg. Multiplier: §e" +
+                                String.format("%.1fx", lazy.getAverageMultiplier()));
+                        sender.sendMessage("");
+                        sender.sendMessage("§6📈 Performance:");
+                        sender.sendMessage("§7Current TPS: §e" + String.format("%.1f", lazy.getCurrentTPS()));
+
+                        // Berechne theoretische Tick-Einsparung
+                        if (lazy.getTotalChunks() > 0 && lazy.getAverageMultiplier() > 1) {
+                            double tickReduction = 100 - (100 / lazy.getAverageMultiplier());
+                            sender.sendMessage("§7Tick-Reduction: §a" +
+                                    String.format("%.1f%%", tickReduction));
+                        }
+
+                        sender.sendMessage("§6═══════════════════════════════════════════════");
+                    } else {
+                        sender.sendMessage("§6Lazy Chunks: §cDeactivated");
+                        sender.sendMessage("§7Activate it in the advanced-config.yml with:");
+                        sender.sendMessage("§e  lazy-chunks:");
+                        sender.sendMessage("§e    enabled: true");
+                    }
+                } else {
+                    sender.sendMessage("§cLazyChunkManager not initialized!");
+                }
+                break;
             default:
                 sendHelp(sender);
                 return true;
         }
+        return true;
     }
 
     private boolean handleReload(CommandSender sender) {
@@ -74,7 +114,15 @@ public class CommandHandler implements CommandExecutor {
         sender.sendMessage("§6⚡ §ePerformance Status:");
         sender.sendMessage("§7TPS (1m/5m/15m): §f" + String.format("%.2f", tps[0]) + "§7/§f" +
                 String.format("%.2f", tps[1]) + "§7/§f" + String.format("%.2f", tps[2]));
-        sender.sendMessage("§7Config-Modus: §f" + (configManager.useAdvancedConfig() ? "Erweitert" : "Einfach"));
+        sender.sendMessage("§7Config-Mode: §f" + (configManager.useAdvancedConfig() ? "Advanced" : "Simple"));
+        if (configManager.useAdvancedConfig()) {
+            if (performanceOptimizer.getLazyChunkManager() != null &&
+                    performanceOptimizer.getLazyChunkManager().isActive()) {
+                sender.sendMessage("§7Lazy Chunks: §aActive");
+            } else {
+                sender.sendMessage("§7Lazy Chunks: §cDeactivated");
+            }
+        }
         return true;
     }
 
